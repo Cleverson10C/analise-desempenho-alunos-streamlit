@@ -6,13 +6,17 @@ import streamlit as st
 st.set_page_config(page_title="Analise de Alunos", layout="wide")
 st.title("Analise de Desempenho dos Alunos")
 
-# Carregar os dados dos alunos
-df = pd.read_excel("alunos_notas.xlsx")
-alunos = df.set_index("Aluno").T.to_dict(orient="list")
+# Carregar e padronizar os dados dos alunos
+raw_df = pd.read_excel("alunos_notas.xlsx")
+nota_cols = [c for c in raw_df.columns if str(c).strip().lower().startswith("nota")]
 
-# Processar os dados para análise
-df = pd.DataFrame(alunos).T
-df.columns = ["nota1", "nota2", "nota3", "nota4",]
+if len(nota_cols) < 4:
+    st.error("A planilha precisa ter ao menos 4 colunas de notas (ex.: Nota 1, Nota 2, Nota 3, Nota 4).")
+    st.stop()
+
+nota_cols = nota_cols[:4]
+df = raw_df.set_index("Aluno")[nota_cols].copy()
+df.columns = ["nota1", "nota2", "nota3", "nota4"]
 df["media"] = df.mean(axis=1).round(2)
 df["desvio_padrao"] = df[["nota1", "nota2", "nota3", "nota4"]].std(axis=1).round(2)
 df["amplitude"] = (
@@ -55,8 +59,7 @@ media_df["angulo"] = media_df["media"] / media_df["media"].sum() * 2 * 3.1415926
 consistencia_df = (
     df[["desvio_padrao", "amplitude"]]
     .sort_values(by="desvio_padrao")
-    .reset_index()
-    .rename(columns={"index": "aluno"})
+    .reset_index(names="aluno")
     .melt(id_vars="aluno", var_name="metrica", value_name="valor")
 )
 
